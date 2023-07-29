@@ -1,0 +1,144 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Author {
+  author_id   Int     @id(map: "pk_authors_author_id") @default(autoincrement())
+  fk_user_id  Int     @unique
+  description String? @db.VarChar(512)
+  users       User    @relation(fields: [fk_user_id], references: [user_id], map: "fk_authors_user_id")
+  drafts      Draft[]
+  posts       Post[]
+
+  @@map("authors")
+}
+
+model Category {
+  category_id      Int        @id(map: "pk_categories_category_id") @default(autoincrement())
+  description      String     @db.VarChar(512)
+  fk_category_id   Int?
+  categories       Category?  @relation("categoriesTocategories", fields: [fk_category_id], references: [category_id], map: "fk_categories_category_id")
+  other_categories Category[] @relation("categoriesTocategories")
+  drafts           Draft[]
+  posts            Post[]
+
+  @@map("categories")
+}
+
+model Comment {
+  comment_id     Int               @id(map: "pk_comments_comment_id") @default(autoincrement())
+  created_at     DateTime          @default(now()) @db.Timestamptz(6)
+  fk_user_id     Int
+  body           String
+  users          User              @relation(fields: [fk_user_id], references: [user_id], map: "fk_comments_user_id")
+  posts_comments PostsOnComments[]
+
+  @@map("comments")
+}
+
+model Draft {
+  draft_id       Int             @id(map: "pk_drafts_draft_id") @default(autoincrement())
+  created_at     DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?       @updatedAt @db.Timestamptz(6)
+  title          String?         @db.VarChar(512)
+  body           String?
+  main_img       String?
+  other_imgs     String[]
+  fk_author_id   Int?
+  fk_category_id Int?
+  categories     Category?       @relation(fields: [fk_category_id], references: [category_id], map: "fk_drafts_category_id")
+  authors        Author?         @relation(fields: [fk_author_id], references: [author_id], map: "fk_posts_author_id")
+  posts_drafts   PostsOnDrafts[]
+
+  @@map("drafts")
+}
+
+model Post {
+  post_id        Int               @id(map: "pk_posts_post_id") @default(autoincrement())
+  title          String?           @db.VarChar(512)
+  created_at     DateTime          @default(now()) @db.Timestamptz(6)
+  body           String?
+  main_img       String?
+  other_imgs     String[]
+  fk_author_id   Int?
+  fk_category_id Int?
+  updated_at     DateTime?         @updatedAt @db.Timestamptz(6)
+  is_published   Boolean           @default(true)
+  authors        Author?           @relation(fields: [fk_author_id], references: [author_id], map: "fk_posts_author_id")
+  categories     Category?         @relation(fields: [fk_category_id], references: [category_id], map: "fk_posts_category_id")
+  posts_comments PostsOnComments[]
+  posts_drafts   PostsOnDrafts[]
+  posts_tags     PostsOnTags[]
+
+  @@map("posts")
+}
+
+model PostsOnComments {
+  fk_comment_id Int
+  fk_post_id    Int
+  comments      Comment @relation(fields: [fk_comment_id], references: [comment_id], map: "fk_posts_comments_comment_id")
+  posts         Post    @relation(fields: [fk_post_id], references: [post_id], map: "fk_posts_comments_post_id")
+
+  @@id([fk_comment_id, fk_post_id], map: "pk_posts_comments_id")
+  @@map("posts_comments")
+}
+
+model PostsOnDrafts {
+  fk_draft_id Int
+  fk_post_id  Int
+  drafts      Draft @relation(fields: [fk_draft_id], references: [draft_id], map: "fk_posts_drafts_drafts_id")
+  posts       Post  @relation(fields: [fk_post_id], references: [post_id], map: "fk_posts_drafts_post_id")
+
+  @@id([fk_draft_id, fk_post_id], map: "pk_posts_drafts_id")
+  @@map("posts_drafts")
+}
+
+model PostsOnTags {
+  fk_post_id Int
+  fk_tag_id  Int
+  posts      Post @relation(fields: [fk_post_id], references: [post_id], map: "fk_posts_tags_post_id")
+  tags       Tag  @relation(fields: [fk_tag_id], references: [tag_id], map: "fk_posts_tags_tag_id")
+
+  @@id([fk_post_id, fk_tag_id], map: "pk_posts_tags_id")
+  @@map("posts_tags")
+}
+
+model Tag {
+  tag_id     Int           @id(map: "pk_tags_tag_id") @default(autoincrement())
+  title      String?       @db.VarChar(512)
+  posts_tags PostsOnTags[]
+
+  @@map("tags")
+}
+
+model Token {
+  refresh_token String @id(map: "pk_refresh_token")
+  fk_user_id    Int    @unique
+  users         User?  @relation(fields: [fk_user_id], references: [user_id], map: "fk_tokens_user_id")
+
+  @@map("tokens")
+}
+
+model User {
+  user_id       Int       @id(map: "pk_users_user_id") @default(autoincrement())
+  first_name    String    @db.VarChar(128)
+  last_name     String?   @db.VarChar(128)
+  avatar        String?   @db.VarChar(128)
+  login         String    @unique @db.VarChar(128)
+  password      String
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  admin         Boolean   @default(false)
+  activate_link String    @db.VarChar(128)
+  email         String?
+  is_activated  Boolean   @default(false)
+  authors       Author[]
+  comments      Comment[]
+  tokens        Token[]
+
+  @@map("users")
+}
