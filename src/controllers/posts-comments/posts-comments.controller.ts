@@ -14,6 +14,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 
+import { ApiError } from '@/exceptions';
 import {
   CommentsService,
   PostsCommentsService,
@@ -35,7 +36,7 @@ export class PostsCommentsController {
   @Post(':id/comments')
   @UseGuards(AuthGuard('jwt'))
   async create(
-    @Param('id') postId: string,
+    @Param('id') postId: number,
     @Body() body: PostsCommentsDto,
     @Res() res: Response,
   ) {
@@ -44,7 +45,7 @@ export class PostsCommentsController {
     const tokenData = this.tokensService.validateAccess(accessToken);
 
     if (!tokenData || typeof tokenData === 'string') {
-      throw new ApiError.BadRequest('Invalid Authorization token');
+      return ApiError.BadRequest('Invalid Authorization token');
     }
     const { id: userId } = tokenData;
     const comment = await this.commentsService.create({
@@ -52,7 +53,7 @@ export class PostsCommentsController {
       ...body,
     });
     await this.postsCommentsService.create({
-      postId: Number(postId),
+      postId,
       commentId: comment.id,
     });
 
@@ -61,7 +62,7 @@ export class PostsCommentsController {
 
   @Get(':id/comments')
   async getCommentsPost(
-    @Param('id') postId: string,
+    @Param('id') postId: number,
     @Req() req: Request,
     @Query('per_page') perPage = 10,
     @Query('page') page = 0,
@@ -82,7 +83,7 @@ export class PostsCommentsController {
       route: `/posts/${postId}/comments`,
       page: Number(page),
       perPage: Number(perPage),
-      apiUrl: this.configService.get('apiUrl'),
+      apiUrl: this.configService.get<string>('API_URL'),
     });
 
     return { ...pagination, comments };

@@ -68,7 +68,7 @@ export class UsersController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: UserDto) {
+  async update(@Param('id') id: number, @Body() body: UserDto) {
     const result = await this.usersService.update({ ...body, id });
 
     return result;
@@ -103,7 +103,7 @@ export class UsersController {
       route: '/users',
       page: Number(page),
       perPage: Number(perPage),
-      apiUrl: this.configService.get('apiUrl'),
+      apiUrl: this.configService.get<string>('API_URL'),
     });
 
     return { ...pagination, data: users };
@@ -145,7 +145,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: number) {
     const result = await this.usersService.delete({ id });
 
     return result;

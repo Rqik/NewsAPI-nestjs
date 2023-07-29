@@ -58,6 +58,13 @@ class ApiError extends Error {
       message: 'Category not found',
     });
   }
+
+  static DraftNotFound() {
+    return new ApiError({
+      status: HttpStatuses.NOT_FOUND,
+      message: 'Draft not found',
+    });
+  }
 }
 
 export default ApiError;

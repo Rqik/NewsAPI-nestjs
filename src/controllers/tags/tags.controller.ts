@@ -34,7 +34,7 @@ export class TagsController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: TagDto) {
+  async update(@Param('id') id: number, @Body() body: TagDto) {
     const tag = await this.tagsService.update({ ...body, id });
 
     return tag;
@@ -59,21 +59,21 @@ export class TagsController {
       route: '/tags',
       page: Number(page),
       perPage: Number(perPage),
-      apiUrl: this.configService.get('apiUrl'),
+      apiUrl: this.configService.get<string>('API_URL'),
     });
 
     return { ...pagination, data: tags };
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: string) {
+  async getOne(@Param('id') id: number) {
     const tag = await this.tagsService.getOne({ id });
 
     return tag;
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: number) {
     const removedTag = await this.tagsService.delete({ id });
 
     return removedTag;

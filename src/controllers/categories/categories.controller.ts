@@ -33,9 +33,9 @@ export class CategoriesController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: CategoryDto) {
+  async update(@Param('id') id: number, @Body() body: CategoryDto) {
     const categoryUpdated = await this.categoriesService.update({
-      id: Number(id),
+      id,
       ...body,
     });
 
@@ -61,15 +61,15 @@ export class CategoriesController {
       route: '/categories',
       page: Number(page),
       perPage: Number(perPage),
-      apiUrl: this.configService.get('apiUrl'),
+      apiUrl: this.configService.get<string>('API_URL'),
     });
 
     return { ...pagination, data: categories };
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: string) {
-    const category = await this.categoriesService.getOne({ id: Number(id) });
+  async getOne(@Param('id') id: number) {
+    const category = await this.categoriesService.getOne({ id });
 
     if (!category) {
       return ApiError.CategoryNotFound();
@@ -79,8 +79,8 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
-    const category = await this.categoriesService.delete({ id: Number(id) });
+  async delete(@Param('id') id: number) {
+    const category = await this.categoriesService.delete({ id });
 
     if (!category) {
       return ApiError.CategoryNotFound();

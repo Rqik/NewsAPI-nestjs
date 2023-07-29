@@ -85,7 +85,7 @@ export class PostsController {
     ]),
   )
   async update(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() body: PostDto,
     @UploadedFiles()
     files: {
@@ -113,7 +113,7 @@ export class PostsController {
   }
 
   @Patch(':id')
-  async partialUpdate(@Param('id') id: string, @Body() body: UpdatePostDto) {
+  async partialUpdate(@Param('id') id: number, @Body() body: UpdatePostDto) {
     const post = await this.postsService.partialUpdate({ ...body, id });
 
     return post;
@@ -160,14 +160,14 @@ export class PostsController {
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: string) {
+  async getOne(@Param('id') id: number) {
     const post = await this.postsService.getOne({ id });
 
     return post;
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: number) {
     const post = await this.postsService.delete({ id });
 
     return post;

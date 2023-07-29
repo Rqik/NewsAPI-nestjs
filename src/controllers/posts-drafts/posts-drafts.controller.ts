@@ -75,8 +75,8 @@ export class PostsDraftsController {
   @Put(':id/drafts/:did')
   @UseGuards(AuthGuard('jwt'))
   async update(
-    @Param('id') postId: string,
-    @Param('did') draftId: string,
+    @Param('id') postId: number,
+    @Param('did') draftId: number,
     @Body() body: PostsDraftsDto,
     @Req() req: Request,
     @Res() res: Response,
@@ -104,8 +104,8 @@ export class PostsDraftsController {
 
     const result = await this.postsDraftsService.update({
       ...body,
-      postId: Number(postId),
-      draftId: Number(draftId),
+      postId,
+      draftId,
       authorId: author.id,
       mainImg: mainNameImg[0],
       otherImgs: otherNameImgs,
@@ -116,7 +116,7 @@ export class PostsDraftsController {
 
   @Get(':id/drafts')
   async getAll(
-    @Param('id') postId: string,
+    @Param('id') postId: number,
     @Res() res: Response,
     @Req() req: Request,
     @Query('per_page') perPage = 10,
@@ -129,7 +129,7 @@ export class PostsDraftsController {
 
     const { totalCount, count, drafts } =
       await this.postsDraftsService.getDraftsPost(
-        { postId: Number(postId), authorId: author.id },
+        { postId, authorId: author.id },
         { page: Number(page), perPage: Number(perPage) },
       );
 
@@ -140,7 +140,7 @@ export class PostsDraftsController {
       route: `/posts/${postId}/drafts`,
       page: Number(page),
       perPage: Number(perPage),
-      apiUrl: this.configService.get('apiUrl'),
+      apiUrl: this.configService.get<string>('API_URL'),
     });
 
     return { ...pagination, drafts };
@@ -148,8 +148,8 @@ export class PostsDraftsController {
 
   @Get(':id/drafts/:did')
   async getOne(
-    @Param('id') postId: string,
-    @Param('did') draftId: string,
+    @Param('id') postId: number,
+    @Param('did') draftId: number,
     @Res() res: Response,
   ) {
     const author = await this.authorValidate(res.locals.user.id, res);
@@ -158,8 +158,8 @@ export class PostsDraftsController {
     }
 
     const result = await this.postsDraftsService.getOne({
-      postId: Number(postId),
-      draftId: Number(draftId),
+      postId,
+      draftId,
       authorId: author.id,
     });
 
@@ -169,14 +169,14 @@ export class PostsDraftsController {
   @Delete(':id/drafts/:did')
   @UseGuards(AuthGuard('jwt'))
   async delete(
-    @Param('id') postId: string,
-    @Param('did') draftId: string,
+    @Param('id') postId: number,
+    @Param('did') draftId: number,
     @Res() res: Response,
   ) {
     await this.authorValidate(res.locals.user.id, res);
     const result = await this.postsDraftsService.delete({
-      postId: Number(postId),
-      draftId: Number(draftId),
+      postId,
+      draftId,
     });
 
     return result;
@@ -185,8 +185,8 @@ export class PostsDraftsController {
   @Post(':id/drafts/:did/publish')
   @UseGuards(AuthGuard('jwt'))
   async publish(
-    @Param('id') postId: string,
-    @Param('did') draftId: string,
+    @Param('id') postId: number,
+    @Param('did') draftId: number,
     @Res() res: Response,
   ) {
     const author = await this.authorValidate(res.locals.user.id, res);
@@ -195,14 +195,14 @@ export class PostsDraftsController {
     }
 
     const result = await this.postsDraftsService.publish({
-      postId: Number(postId),
-      draftId: Number(draftId),
+      postId,
+      draftId,
     });
 
     return result;
   }
 
-  private async authorValidate(userId: string, res: Response) {
+  private async authorValidate(userId: number, res: Response) {
     if (res.locals.user.id !== userId) {
       return null;
     }

@@ -14,7 +14,7 @@ import { Request, Response } from 'express';
 import ms from 'ms';
 
 import { ApiError } from '@/exceptions';
-import { UsersService } from '@/services;
+import { UsersService } from '@/services';
 
 import { AuthDto } from './dto/auth.dto';
 
@@ -34,11 +34,11 @@ export class AuthController {
     }
 
     res.cookie('refreshToken', userData.refreshToken, {
-      maxAge: ms(this.configService.get('jwtRefreshExpireIn') as string),
+      maxAge: ms(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN')),
       httpOnly: true,
     });
 
-    return  userData ;
+    return res.json(userData);
   }
 
   @Get('logout')
@@ -53,7 +53,7 @@ export class AuthController {
   @Get('activate/:link')
   async activate(@Res() res: Response, @Param('link') link: string) {
     await this.usersService.activate(link);
-    res.redirect(this.configService.get('clientUrl', 'https://ya.ru/'));
+    res.redirect(this.configService.get('CLIENT_URL', 'https://ya.ru/'));
   }
 
   @Get('refresh')
@@ -64,7 +64,7 @@ export class AuthController {
       next(userData);
     } else {
       res.cookie('refreshToken', userData.refreshToken, {
-        maxAge: ms(this.configService.get('jwtRefreshExpireIn') as string),
+        maxAge: ms(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN')),
         httpOnly: true,
       });
       res.json(userData);

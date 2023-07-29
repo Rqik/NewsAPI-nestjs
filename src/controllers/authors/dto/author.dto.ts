@@ -5,5 +5,5 @@ export class AuthorDto {
   description: string;
 
   @IsNumber()
-  userId: string;
+  userId: number;
 }

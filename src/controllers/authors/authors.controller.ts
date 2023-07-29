@@ -33,7 +33,7 @@ export class AuthorsController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: AuthorDto) {
+  async update(@Param('id') id: number, @Body() body: AuthorDto) {
     const result = await this.authorsService.update({ ...body, id });
 
     return result;
@@ -57,14 +57,14 @@ export class AuthorsController {
       route: '/authors',
       page: Number(page),
       perPage: Number(perPage),
-      apiUrl: this.configService.get('apiUrl'),
+      apiUrl: this.configService.get<string>('API_URL'),
     });
 
     return { ...pagination, data: authors };
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: string) {
+  async getOne(@Param('id') id: number) {
     const result = await this.authorsService.getOne({ id });
 
     if (!result) {
@@ -75,7 +75,7 @@ export class AuthorsController {
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: number) {
     const result = await this.authorsService.delete({ id });
 
     if (!result) {
