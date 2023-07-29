@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 
+import { AppConfigModule } from './config/config.module';
 import { AuthController } from './controllers/auth/auth.controller';
 import { AuthorsController } from './controllers/authors/authors.controller';
 import { CategoriesController } from './controllers/categories/categories.controller';
@@ -24,11 +24,7 @@ import { TokensService } from './services/tokens/tokens.service';
 import { UsersService } from './services/users/users.service';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      envFilePath: ['.env'],
-    }),
-  ],
+  imports: [AppConfigModule],
   controllers: [
     AuthController,
     AuthorsController,

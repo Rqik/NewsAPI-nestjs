@@ -1,6 +1,6 @@
-import Joi from 'joi';
+import * as Joi from 'joi';
 
-export default Joi.object({
+const schema = Joi.object({
   NODE_ENV: Joi.string()
     .allow('development', 'production', 'test')
     .default('development'),
@@ -34,3 +34,5 @@ export default Joi.object({
 })
   .unknown()
   .required();
+
+export default schema;

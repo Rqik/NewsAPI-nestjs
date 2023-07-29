@@ -9,17 +9,21 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import ms from 'ms';
 
 import { ApiError } from '@/exceptions';
-import { UsersService } from '@/services/users/users.service';
+import { UsersService } from '@/services;
 
 import { AuthDto } from './dto/auth.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('login')
   async login(@Body() body: AuthDto, @Res() res: Response, @Next() next: any) {
@@ -30,14 +34,14 @@ export class AuthController {
     }
 
     res.cookie('refreshToken', userData.refreshToken, {
-      maxAge: ms(config.jwtRefreshExpireIn as string),
+      maxAge: ms(this.configService.get('jwtRefreshExpireIn') as string),
       httpOnly: true,
     });
 
-    return res.json(userData);
+    return  userData ;
   }
 
-  @Post('logout')
+  @Get('logout')
   async logout(@Req() req: Request, @Res() res: Response) {
     const { refreshToken } = req.cookies;
     const token = await this.usersService.logout(refreshToken);
@@ -47,12 +51,12 @@ export class AuthController {
   }
 
   @Get('activate/:link')
-  @Redirect(config.clientUrl || 'https://ya.ru/')
-  async activate(@Param('link') link: string) {
+  async activate(@Res() res: Response, @Param('link') link: string) {
     await this.usersService.activate(link);
+    res.redirect(this.configService.get('clientUrl', 'https://ya.ru/'));
   }
 
-  @Post('refresh')
+  @Get('refresh')
   async refresh(@Req() req: Request, @Res() res: Response, @Next() next: any) {
     const { refreshToken } = req.cookies;
     const userData = await this.usersService.refresh(refreshToken);
@@ -60,7 +64,7 @@ export class AuthController {
       next(userData);
     } else {
       res.cookie('refreshToken', userData.refreshToken, {
-        maxAge: ms(config.jwtRefreshExpireIn as string),
+        maxAge: ms(this.configService.get('jwtRefreshExpireIn') as string),
         httpOnly: true,
       });
       res.json(userData);

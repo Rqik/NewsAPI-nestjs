@@ -1,0 +1,12 @@
+export { AuthorsService } from './authors';
+export { CategoriesService } from './categories';
+export { CommentsService } from './comments';
+export { DraftsService } from './drafts';
+export { TagsService } from './tags';
+export { UsersService } from './users';
+export { PostsService } from './posts';
+export { PostsCommentsService } from './posts-comments';
+export { PostsDraftsService } from './posts-drafts';
+export { MailService } from './mail';
+export { TokensService } from './tokens';
+export { FileService } from './file';

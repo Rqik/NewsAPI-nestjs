@@ -44,5 +44,18 @@ module.exports = {
     'no-shadow': 'off',
     'newline-before-return': 'warn',
     'import/prefer-default-export': 'off',
+    'import/no-extraneous-dependencies': 'off',
+    'import/order':'off',
   },
+  'settings': {
+    'import/resolver': {
+      'node': {
+        'extensions': ['.js', '.ts'],
+        'moduleDirectory': ['src/', 'node_modules']
+      },
+      'typescript': {
+        'project': './tsconfig.json'
+      }
+    }
+  }
 };

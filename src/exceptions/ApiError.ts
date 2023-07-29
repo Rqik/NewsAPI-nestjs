@@ -44,6 +44,20 @@ class ApiError extends Error {
       errors,
     });
   }
+
+  static AuthorNotFound() {
+    return new ApiError({
+      status: HttpStatuses.NOT_FOUND,
+      message: 'Author not found',
+    });
+  }
+
+  static CategoryNotFound() {
+    return new ApiError({
+      status: HttpStatuses.NOT_FOUND,
+      message: 'Category not found',
+    });
+  }
 }
 
 export default ApiError;
