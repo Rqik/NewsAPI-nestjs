@@ -56,12 +56,12 @@ export class DraftsService {
     return this.convertCase(draft);
   }
 
-  async getOne({ id }: IdDto): Promise<DraftConverted | null> {
+  async getOne(id: number): Promise<DraftConverted | null> {
     const draft = await this.prisma.draft.findUnique({
       where: { draft_id: id },
     });
 
-    return draft ? this.convertCase(draft) : draft;
+    return this.convertCase(draft);
   }
 
   async getDrafts(

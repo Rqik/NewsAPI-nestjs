@@ -43,7 +43,7 @@ export class AuthorsService {
     };
   }
 
-  async getOne({ id }: { id: number }) {
+  async getOne(id: number) {
     const author = await this.prisma.author.findUnique({
       where: { author_id: id },
     });
@@ -54,7 +54,7 @@ export class AuthorsService {
     return this.convertCase(author);
   }
 
-  async getByUserId({ userId }: { userId: number }) {
+  async getByUserId(userId: number) {
     const author = await this.prisma.author.findFirst({
       where: { fk_user_id: userId },
     });
@@ -65,7 +65,7 @@ export class AuthorsService {
     return this.convertCase(author);
   }
 
-  async deleteUserAuthors({ id }: { id: number }) {
+  async deleteUserAuthors(id: number) {
     const author = await this.prisma.author.delete({
       where: {
         fk_user_id: Number(id),
@@ -75,7 +75,7 @@ export class AuthorsService {
     return this.convertCase(author);
   }
 
-  async delete({ id }: { id: number }) {
+  async delete(id: number) {
     const author = await this.prisma.author.delete({
       where: { author_id: id },
     });

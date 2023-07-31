@@ -11,9 +11,12 @@ import {
   Query,
   Req,
   Res,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Request, Response } from 'express';
 
 import { ApiError } from '@/exceptions';
@@ -25,6 +28,7 @@ import {
 } from '@/services';
 import { paginator } from '@/shared';
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PostsDraftsDto } from './dto/posts-drafts.dto';
 
 @Controller('posts')
@@ -38,13 +42,24 @@ export class PostsDraftsController {
   ) {}
 
   @Post(':id/drafts')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'mainImg', maxCount: 1 },
+      { name: 'otherImgs' },
+    ]),
+  )
   async create(
     @Param('id') postId: string,
     @Body() body: PostsDraftsDto,
     @Res() res: Response,
+    @UploadedFiles()
+    files: {
+      mainImg?: Express.Multer.File[];
+      otherImgs?: Express.Multer.File[];
+    },
   ) {
-    const { mainImg, otherImgs } = req.files || {};
+    const { mainImg, otherImgs } = files || {};
 
     const author = await this.authorValidate(res.locals.user.id, res);
     if (!author) {
@@ -73,22 +88,34 @@ export class PostsDraftsController {
   }
 
   @Put(':id/drafts/:did')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'mainImg', maxCount: 1 },
+      { name: 'otherImgs' },
+    ]),
+  )
   async update(
     @Param('id') postId: number,
     @Param('did') draftId: number,
     @Body() body: PostsDraftsDto,
     @Req() req: Request,
     @Res() res: Response,
+    @UploadedFiles()
+    files: {
+      mainImg?: Express.Multer.File[];
+      otherImgs?: Express.Multer.File[];
+    },
   ) {
-    const { mainImg, otherImgs } = req.files || {};
+    const { mainImg, otherImgs } = files || {};
 
-    const author = await this.authorsService.getByUserId({
-      id: res.locals.user.id,
-    });
-    const post = await this.postsService.getOne({ id: postId });
+    const author = await this.authorsService.getByUserId(res.locals.user.id);
 
-    if (!author || !post || post.author.id !== author.id) {
+    const post = await this.postsService.getOne(postId);
+    if (post instanceof ApiError) {
+      return post;
+    }
+    if (!author || !post || post.author?.id !== author.id) {
       throw new HttpException('Not found', HttpStatus.NOT_FOUND);
     }
 
@@ -160,14 +187,14 @@ export class PostsDraftsController {
     const result = await this.postsDraftsService.getOne({
       postId,
       draftId,
-      authorId: author.id,
+      // authorId: author.id,
     });
 
     return result;
   }
 
   @Delete(':id/drafts/:did')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   async delete(
     @Param('id') postId: number,
     @Param('did') draftId: number,
@@ -183,7 +210,7 @@ export class PostsDraftsController {
   }
 
   @Post(':id/drafts/:did/publish')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   async publish(
     @Param('id') postId: number,
     @Param('did') draftId: number,
@@ -207,7 +234,7 @@ export class PostsDraftsController {
       return null;
     }
 
-    const author = await this.authorsService.getByUserId({ id: userId });
+    const author = await this.authorsService.getByUserId(userId);
 
     if (author instanceof ApiError || author === null) {
       return null;

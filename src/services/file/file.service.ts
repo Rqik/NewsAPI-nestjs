@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import fileUpload from 'express-fileupload';
+import fs from 'fs';
 import path from 'path';
 import { v4 } from 'uuid';
 
@@ -9,8 +9,14 @@ import { ApiError } from '@/exceptions';
 export class FileService {
   private imgAllowType = ['image/png', 'image/jpg', 'image/jpeg', 'image/webp'];
 
-  savePostImage<T extends fileUpload.UploadedFile>(file: T | T[]) {
+  savePostImage<T extends Express.Multer.File>(file: T | T[]) {
     if (!file) return null;
+    const filePath = path.resolve(__dirname, '@/ ', 'images', 'posts');
+
+    if (!fs.existsSync(filePath)) {
+      fs.mkdirSync(filePath, { recursive: true });
+    }
+
     if (!(file instanceof Array)) {
       if (!this.imgAllowType.includes(file.mimetype)) {
         return ApiError.BadRequest('File type');
@@ -18,7 +24,11 @@ export class FileService {
 
       const nameImg = `${v4()}.jpg`;
 
-      file.mv(path.resolve(__dirname, '@/ ', 'images', 'posts', nameImg));
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
+
+      fs.writeFileSync(path.join(filePath, nameImg), file.buffer);
 
       return [nameImg];
     }
@@ -28,7 +38,7 @@ export class FileService {
       file.forEach((picture) => {
         const nameImg = `${v4()}.jpg`;
         namesImgs.push(nameImg);
-        picture.mv(path.resolve(__dirname, '@/ ', 'images', 'posts', nameImg));
+        fs.writeFileSync(path.join(filePath, nameImg), picture.buffer);
       });
 
       return namesImgs;
@@ -37,14 +47,15 @@ export class FileService {
     return null;
   }
 
-  saveAvatar<T extends fileUpload.UploadedFile>(file?: T | T[]) {
+  saveAvatar<T extends Express.Multer.File>(file?: T | T[]) {
     const nameImg = `${v4()}.jpg`;
+    const filePath = path.resolve(__dirname, '@/ ', 'images', 'avatars');
 
     if (file && !(file instanceof Array)) {
       if (!this.imgAllowType.includes(file.mimetype)) {
         return ApiError.BadRequest('File type');
       }
-      file.mv(path.resolve(__dirname, '@/ ', 'images', 'avatars', nameImg));
+      fs.writeFileSync(path.join(filePath, nameImg), file.buffer);
 
       return nameImg;
     }

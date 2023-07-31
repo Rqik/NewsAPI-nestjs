@@ -20,8 +20,9 @@ import {
   PostsCommentsService,
   TokensService,
 } from '@/services';
-import { paginator } from '@/shared';
+import { getAuthorizationToken, paginator } from '@/shared';
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PostsCommentsDto } from './dto/posts-comments.dto';
 
 @Controller('posts')
@@ -34,11 +35,12 @@ export class PostsCommentsController {
   ) {}
 
   @Post(':id/comments')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   async create(
     @Param('id') postId: number,
     @Body() body: PostsCommentsDto,
     @Res() res: Response,
+    @Res() req: Request,
   ) {
     const accessToken = getAuthorizationToken(req);
 
@@ -68,13 +70,11 @@ export class PostsCommentsController {
     @Query('page') page = 0,
   ) {
     const { totalCount, count, comments } =
-      await this.postsCommentsService.getPostComments(
-        { id: postId },
-        {
-          page: Number(page),
-          perPage: Number(perPage),
-        },
-      );
+      await this.postsCommentsService.getPostComments({
+        id: postId,
+        page: Number(page),
+        perPage: Number(perPage),
+      });
 
     const pagination = paginator({
       totalCount,
@@ -90,7 +90,7 @@ export class PostsCommentsController {
   }
 
   @Delete(':id/comments/:cid')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   async delete(@Param('id') postId: string, @Param('cid') commentId: string) {
     const comment = await this.postsCommentsService.delete({
       postId: Number(postId),

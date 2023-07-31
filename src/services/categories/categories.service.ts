@@ -49,7 +49,7 @@ export class CategoriesService {
     };
   }
 
-  async getOne({ id }: IdDto) {
+  async getOne(id: number) {
     const category = await this.prisma.category.findUnique({
       where: { category_id: id },
     });
@@ -57,7 +57,7 @@ export class CategoriesService {
     return category ? this.convertCase(category) : category;
   }
 
-  async delete({ id }: IdDto) {
+  async delete(id: number) {
     // TODO:проверить data !== null
     const data = await this.prisma.category.delete({
       where: {

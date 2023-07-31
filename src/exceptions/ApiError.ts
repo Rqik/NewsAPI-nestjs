@@ -59,6 +59,13 @@ class ApiError extends Error {
     });
   }
 
+  static PostsNotFound() {
+    return new ApiError({
+      status: HttpStatuses.NOT_FOUND,
+      message: 'Post not found',
+    });
+  }
+
   static DraftNotFound() {
     return new ApiError({
       status: HttpStatuses.NOT_FOUND,

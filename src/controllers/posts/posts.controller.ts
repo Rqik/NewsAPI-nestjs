@@ -9,17 +9,20 @@ import {
   Put,
   Query,
   Req,
+  Res,
   UploadedFiles,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 import { ApiError } from '@/exceptions';
 import { AuthorsService, FileService, PostsService } from '@/services';
 import { paginator } from '@/shared';
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PostDto } from './dto/post.dto';
 import { UpdatePostDto } from './dto/updatePost.dto';
 
@@ -33,6 +36,7 @@ export class PostsController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'mainImg', maxCount: 1 },
@@ -41,6 +45,7 @@ export class PostsController {
   )
   async create(
     @Body() body: PostDto,
+    @Res() res: Response,
     @UploadedFiles()
     files: {
       mainImg?: Express.Multer.File[];
@@ -51,18 +56,16 @@ export class PostsController {
 
     const mainNameImg = this.fileService.savePostImage(mainImg) || [];
     if (mainNameImg instanceof ApiError) {
-      throw mainNameImg;
+      return mainNameImg;
     }
     const otherNameImgs = this.fileService.savePostImage(otherImgs) || [];
     if (otherNameImgs instanceof ApiError) {
-      throw mainNameImg;
+      return mainNameImg;
     }
 
-    const author = await this.authorsService.getByUserId({
-      id: res.locals.user.id,
-    });
+    const author = await this.authorsService.getByUserId(res.locals.user.id);
     if (author instanceof ApiError) {
-      throw author;
+      return author;
     }
     if (author === null || Number(body.authorId) !== author.id) {
       return ApiError.BadRequest('Not valid author id');
@@ -93,6 +96,7 @@ export class PostsController {
       otherImgs?: Express.Multer.File[];
     },
   ) {
+    const { mainImg, otherImgs } = files;
     const mainNameImg = this.fileService.savePostImage(mainImg) || [];
     if (mainNameImg instanceof ApiError) {
       throw mainNameImg;
@@ -104,7 +108,7 @@ export class PostsController {
 
     const post = await this.postsService.update({
       ...body,
-      id: Number(id),
+      id,
       mainImg: mainNameImg[0],
       otherImgs: otherNameImgs,
     });
@@ -161,14 +165,14 @@ export class PostsController {
 
   @Get(':id')
   async getOne(@Param('id') id: number) {
-    const post = await this.postsService.getOne({ id });
+    const post = await this.postsService.getOne(id);
 
     return post;
   }
 
   @Delete(':id')
   async delete(@Param('id') id: number) {
-    const post = await this.postsService.delete({ id });
+    const post = await this.postsService.delete(id);
 
     return post;
   }

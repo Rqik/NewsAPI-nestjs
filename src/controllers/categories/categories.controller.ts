@@ -69,7 +69,7 @@ export class CategoriesController {
 
   @Get(':id')
   async getOne(@Param('id') id: number) {
-    const category = await this.categoriesService.getOne({ id });
+    const category = await this.categoriesService.getOne(id);
 
     if (!category) {
       return ApiError.CategoryNotFound();
@@ -80,7 +80,7 @@ export class CategoriesController {
 
   @Delete(':id')
   async delete(@Param('id') id: number) {
-    const category = await this.categoriesService.delete({ id });
+    const category = await this.categoriesService.delete(id);
 
     if (!category) {
       return ApiError.CategoryNotFound();

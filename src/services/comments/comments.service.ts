@@ -28,11 +28,15 @@ export class CommentsService {
     return this.convertCase(comment);
   }
 
-  async getComments(
-    commentIds: number[],
-    page: number,
-    perPage: number,
-  ): Promise<{
+  async getComments({
+    commentIds,
+    page,
+    perPage,
+  }: {
+    commentIds: number[];
+    page: number;
+    perPage: number;
+  }): Promise<{
     totalCount: number;
     count: number;
     comments: CommentConverted[];
@@ -68,7 +72,7 @@ export class CommentsService {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private convertCase(comment: Comment): CommentConverted {
+  convertCase(comment: Comment): CommentConverted {
     return {
       id: comment.comment_id,
       userId: comment.fk_user_id,

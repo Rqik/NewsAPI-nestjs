@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 
 import { AppConfigModule } from './config/config.module';
 import { AuthController } from './controllers/auth/auth.controller';
@@ -9,6 +10,7 @@ import { PostsCommentsController } from './controllers/posts-comments/posts-comm
 import { PostsDraftsController } from './controllers/posts-drafts/posts-drafts.controller';
 import { TagsController } from './controllers/tags/tags.controller';
 import { UsersController } from './controllers/users/users.controller';
+import { DatabaseModule } from './database/database.module';
 import { AuthorsService } from './services/authors/authors.service';
 import { CategoriesService } from './services/categories/categories.service';
 import { CommentsService } from './services/comments/comments.service';
@@ -24,7 +26,7 @@ import { TokensService } from './services/tokens/tokens.service';
 import { UsersService } from './services/users/users.service';
 
 @Module({
-  imports: [AppConfigModule],
+  imports: [AppConfigModule, DatabaseModule, JwtModule],
   controllers: [
     AuthController,
     AuthorsController,

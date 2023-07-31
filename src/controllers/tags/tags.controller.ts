@@ -67,14 +67,14 @@ export class TagsController {
 
   @Get(':id')
   async getOne(@Param('id') id: number) {
-    const tag = await this.tagsService.getOne({ id });
+    const tag = await this.tagsService.getOne(id);
 
     return tag;
   }
 
   @Delete(':id')
   async delete(@Param('id') id: number) {
-    const removedTag = await this.tagsService.delete({ id });
+    const removedTag = await this.tagsService.delete(id);
 
     return removedTag;
   }

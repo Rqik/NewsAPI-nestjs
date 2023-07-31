@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import jsonwebtoken from 'jsonwebtoken';
+import { JwtService } from '@nestjs/jwt';
+import { Token } from '@prisma/client';
 
 import { PrismaService } from '@/database/prisma.service';
 import { UserDto } from '@/dtos/user.dto';
+
+import { TokenDto } from './dto/token.dto';
 
 @Injectable()
 export class TokensService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly jwtService: jsonwebtoken,
+    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -51,7 +54,7 @@ export class TokensService {
   }: {
     refreshToken: string;
     userId: number;
-  }): Promise<Token> {
+  }): Promise<TokenDto> {
     const tokenData = await this.getById({ userId });
     if (tokenData) {
       tokenData.refreshToken = refreshToken;
@@ -70,7 +73,7 @@ export class TokensService {
     return this.convertCase(token);
   }
 
-  async getById({ userId }: { userId: number }): Promise<Token | null> {
+  async getById({ userId }: { userId: number }): Promise<TokenDto | null> {
     const token = await this.prismaService.token.findFirst({
       where: {
         fk_user_id: userId,
@@ -88,7 +91,7 @@ export class TokensService {
     refreshToken,
   }: {
     refreshToken: string;
-  }): Promise<Token | null> {
+  }): Promise<TokenDto | null> {
     const token = await this.prismaService.token.findUnique({
       where: {
         refresh_token: refreshToken,
@@ -131,7 +134,7 @@ export class TokensService {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private convertCase(token: TokenRow): Token {
+  private convertCase(token: Token): TokenDto {
     return {
       refreshToken: token.refresh_token,
       userId: token.fk_user_id,

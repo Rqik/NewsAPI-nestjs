@@ -61,7 +61,7 @@ export class TagsService {
     return tags.map((tag) => this.convertCase(tag));
   }
 
-  async getOne({ id }: IdDto) {
+  async getOne(id: number) {
     const tag = await this.prismaService.tag.findUnique({
       where: {
         tag_id: Number(id),
@@ -74,7 +74,7 @@ export class TagsService {
     return this.convertCase(tag);
   }
 
-  async delete({ id }: IdDto) {
+  async delete(id: number) {
     const tag = await this.prismaService.tag.delete({
       where: {
         tag_id: Number(id),
@@ -85,7 +85,7 @@ export class TagsService {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private convertCase(tag: Tag): IdDto & TagDto {
+  convertCase(tag: Tag): IdDto & TagDto {
     return {
       id: tag.tag_id,
       title: tag.title,

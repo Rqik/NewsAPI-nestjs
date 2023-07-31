@@ -11,16 +11,20 @@ import {
   Query,
   Req,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Request, Response } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
 import ms from 'ms';
 
 import { ApiError } from '@/exceptions';
 import { FileService, TokensService, UsersService } from '@/services';
-import { paginator } from '@/shared';
+import { getAuthorizationToken, paginator } from '@/shared';
 
+import { UpdateUserDto } from './dto/updateUser.dto';
 import { UserDto } from './dto/user.dto';
 
 @Controller('users')
@@ -33,24 +37,24 @@ export class UsersController {
   ) {}
 
   @Post()
+  @UseInterceptors(FileInterceptor('avatar'))
   async create(
     @Body() body: UserDto,
     @Res() res: Response,
-    @Req() req: Request,
+    @UploadedFile() avatar,
   ) {
     const { firstName, lastName, login, password, email } = body;
-    const ava = req.files;
-    const file = ava?.avatar;
-    const avatar = this.fileService.saveAvatar(file);
 
-    if (avatar instanceof ApiError) {
+    const avatarName = this.fileService.saveAvatar(avatar);
+
+    if (avatarName instanceof ApiError) {
       throw new HttpException(avatar, HttpStatus.BAD_REQUEST);
     }
 
     const userData = await this.usersService.registration({
       password,
       login,
-      avatar,
+      avatar: avatarName,
       lastName,
       firstName,
       email,
@@ -75,10 +79,12 @@ export class UsersController {
   }
 
   @Put(':login')
-  async partialUpdate(@Param('login') login: string, @Body() body: U) {
-    const bodyValues = Object.values(body);
+  async partialUpdate(
+    @Param('login') login: string,
+    @Body() body: UpdateUserDto,
+  ) {
     const result = await this.usersService.partialUpdate({
-      ...bodyValues,
+      ...body,
       login,
     });
 

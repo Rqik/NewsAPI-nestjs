@@ -65,7 +65,7 @@ export class AuthorsController {
 
   @Get(':id')
   async getOne(@Param('id') id: number) {
-    const result = await this.authorsService.getOne({ id });
+    const result = await this.authorsService.getOne(id);
 
     if (!result) {
       return ApiError.AuthorNotFound();
@@ -76,7 +76,7 @@ export class AuthorsController {
 
   @Delete(':id')
   async delete(@Param('id') id: number) {
-    const result = await this.authorsService.delete({ id });
+    const result = await this.authorsService.delete(id);
 
     if (!result) {
       return ApiError.AuthorNotFound();
