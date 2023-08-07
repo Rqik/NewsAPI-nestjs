@@ -68,7 +68,7 @@ export class TagsService {
       },
     });
     if (tag === null) {
-      return ApiError.BadRequest(`Tag by ${id} not found`);
+      return ApiError.TagNotFound();
     }
 
     return this.convertCase(tag);

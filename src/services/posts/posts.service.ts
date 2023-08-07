@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Comment, Post, Tag } from '@prisma/client';
+import { log } from 'console';
 
 import { UpdatePostDto } from '@/controllers/posts/dto/updatePost.dto';
 import { PrismaService } from '@/database/prisma.service';
 import { IdDto } from '@/dtos/id.dto';
 import { ApiError } from '@/exceptions';
 
+import { CategoriesService } from '../categories';
 import { CommentsService } from '../comments';
 import { PostsCommentsService } from '../posts-comments';
 import { PostsTagsService } from '../posts-tags';
@@ -62,6 +64,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly commentsService: CommentsService,
+    private readonly categoriesService: CategoriesService,
     private readonly tagsService: TagsService,
     private readonly postsCommentsService: PostsCommentsService,
     private readonly postsTagsService: PostsTagsService,
@@ -79,11 +82,12 @@ export class PostsService {
     const data = await this.prisma.post.create({
       data: {
         title,
-        fk_author_id: authorId,
-        fk_category_id: categoryId,
+        fk_author_id: Number(authorId),
+        fk_category_id: Number(categoryId) || null,
         body,
         main_img: mainImg,
         other_imgs: otherImgs,
+        is_published: false,
       },
     });
 
@@ -94,10 +98,9 @@ export class PostsService {
     );
 
     return {
-      ...data,
+      ...this.convertCase(data),
       id: postId,
       tags,
-      // tags: tags.map((tag) => tag.tagId),
     };
   }
 
@@ -122,28 +125,15 @@ export class PostsService {
       where: { post_id: id },
       data: {
         title,
-        fk_author_id: authorId,
-        fk_category_id: categoryId,
+        fk_author_id: Number(authorId),
+        fk_category_id: Number(categoryId) || null,
         body,
         main_img: mainImg,
         other_imgs: otherImgs,
       },
     });
 
-    return data;
-  }
-
-  async partialUpdate(body: UpdatePostDto & IdDto) {
-    const { id } = body;
-    const data = await this.prisma.post.update({
-      where: { post_id: id },
-      data: body,
-    });
-
-    return {
-      ...data,
-      id: data.post_id,
-    };
+    return this.convertCase(data);
   }
 
   async getAll(
@@ -207,6 +197,7 @@ export class PostsService {
     const post = await this.prisma.post.findUnique({
       where: { post_id: id },
       include: {
+        authors: { include: { users: true } },
         posts_tags: true,
         posts_comments: true,
       },
@@ -222,11 +213,13 @@ export class PostsService {
       page: 0,
     });
     const tags = await this.postsTagsService.getPostTags(id);
+    const categories = await this.categoriesService.getOne(post.fk_category_id);
 
     return {
       ...this.convertCase(post),
       tags,
       comments,
+      categories,
     };
   }
 
@@ -242,7 +235,7 @@ export class PostsService {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  convertCase(post: Post) {
+  convertCase(post: any) {
     const {
       post_id: id,
       title,
@@ -250,53 +243,50 @@ export class PostsService {
       body,
       main_img: mainImg,
       other_imgs: otherImgs,
-      // root_category: rootCategory,
-      // author_id: authorId,
-      // author_description: description,
-      // arr_categories: categories,
-      // user_id: uId,
-      // first_name: firstName,
-      // last_name: lastName,
-      // avatar,
-      // login,
-      // admin,
-      // tags: ts,
-      // comments: cm,
-      // arr_category_id: categoryIds,
+      authors,
+      arr_category_id: categoryIds,
       fk_category_id: rootCategoryId,
+      is_published: isPublished,
     } = post;
+    const {
+      author_id: authorId,
+      description: authorDescription,
+      users,
+    } = authors;
 
-    // const comments = cm.map((c) => this.commentsService.convertCase(c));
-    // const tags = ts.map((t) => this.tagsService.convertCase(t));
+    const {
+      user_id: uId,
+      first_name: firstName,
+      last_name: lastName,
+      avatar,
+      login,
+      is_admin: admin,
+    } = users;
 
     return {
       id,
       rootCategory: {
         id: rootCategoryId,
-        // description: rootCategory,
       },
-      // categories,
       createdAt,
       title,
       body,
       mainImg,
       otherImgs,
       author: {
-        id: 2,
-        // id: authorId,
-        // description,
+        id: authorId,
+        description: authorDescription,
       },
       user: {
-        // id: uId,
-        // firstName,
-        // lastName,
-        // avatar,
-        // login,
-        // admin,
+        id: uId,
+        firstName,
+        lastName,
+        avatar,
+        login,
+        admin,
       },
-      // comments,
-      // tags,
-      // categoryIds,
+      categoryIds,
+      isPublished,
     };
   }
 }

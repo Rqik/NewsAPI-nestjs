@@ -1,6 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { Injectable } from '@nestjs/common';
-import fs from 'fs';
-import path from 'path';
 import { v4 } from 'uuid';
 
 import { ApiError } from '@/exceptions';
@@ -11,7 +12,15 @@ export class FileService {
 
   savePostImage<T extends Express.Multer.File>(file: T | T[]) {
     if (!file) return null;
-    const filePath = path.resolve(__dirname, '@/ ', 'images', 'posts');
+    const filePath = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'static',
+      'images',
+      'posts',
+    );
 
     if (!fs.existsSync(filePath)) {
       fs.mkdirSync(filePath, { recursive: true });
@@ -49,7 +58,19 @@ export class FileService {
 
   saveAvatar<T extends Express.Multer.File>(file?: T | T[]) {
     const nameImg = `${v4()}.jpg`;
-    const filePath = path.resolve(__dirname, '@/ ', 'images', 'avatars');
+    const filePath = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'static',
+      'images',
+      'avatars',
+    );
+
+    if (!fs.existsSync(filePath)) {
+      fs.mkdirSync(filePath, { recursive: true });
+    }
 
     if (file && !(file instanceof Array)) {
       if (!this.imgAllowType.includes(file.mimetype)) {

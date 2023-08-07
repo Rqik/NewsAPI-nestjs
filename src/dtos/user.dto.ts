@@ -1,6 +1,6 @@
 import { IsBoolean, IsNumber, IsString } from 'class-validator';
 
-export class UserDto {
+export class UserLocalDto {
   @IsString()
   email: string;
 
@@ -12,4 +12,11 @@ export class UserDto {
 
   @IsBoolean()
   isAdmin: boolean;
+
+  constructor(data: Partial<UserLocalDto>) {
+    this.email = data.email;
+    this.id = data.id;
+    this.isActivated = data.isActivated;
+    this.isAdmin = data.isAdmin;
+  }
 }

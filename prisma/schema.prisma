@@ -119,7 +119,7 @@ model Tag {
 model Token {
   refresh_token String @id(map: "pk_refresh_token")
   fk_user_id    Int    @unique
-  users         User?  @relation(fields: [fk_user_id], references: [user_id], map: "fk_tokens_user_id")
+  users         User?  @relation(fields: [fk_user_id], references: [user_id], map: "fk_tokens_user_id", onDelete: Cascade)
 
   @@map("tokens")
 }
@@ -136,7 +136,7 @@ model User {
   activate_link String    @db.VarChar(128)
   email         String?
   is_activated  Boolean   @default(false)
-  authors       Author[]
+  author        Author?
   comments      Comment[]
   tokens        Token[]
 

@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Token } from '@prisma/client';
 
 import { PrismaService } from '@/database/prisma.service';
-import { UserDto } from '@/dtos/user.dto';
+import { UserLocalDto } from '@/dtos/user.dto';
 
 import { TokenDto } from './dto/token.dto';
 
@@ -16,12 +16,17 @@ export class TokensService {
     private readonly configService: ConfigService,
   ) {}
 
-  generateTokens(payload: UserDto): {
+  generateTokens(payload: UserLocalDto): {
     accessToken: string;
     refreshToken: string;
   } {
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_ACCESS_SECRET'),
+      expiresIn: this.configService.get('JWT_ACCESS_EXPIRES_IN'),
+    });
+
     const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_REFRESH_SECRET'),
       expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN'),
     });
 
@@ -30,9 +35,11 @@ export class TokensService {
 
   validateAccess(token: string) {
     try {
-      const userData = this.jwtService.verify(token);
+      const userData = this.jwtService.verify(token, {
+        secret: this.configService.get('JWT_ACCESS_SECRET'),
+      });
 
-      return userData;
+      return userData as UserLocalDto;
     } catch (error) {
       return null;
     }
@@ -40,9 +47,11 @@ export class TokensService {
 
   validateRefresh(token: string) {
     try {
-      const userData = this.jwtService.verify(token);
+      const userData = this.jwtService.verify(token, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+      });
 
-      return userData;
+      return userData as UserLocalDto;
     } catch (error) {
       return null;
     }

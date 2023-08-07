@@ -5,7 +5,9 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  Next,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -17,7 +19,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 import { ApiError } from '@/exceptions';
 import {
@@ -26,7 +28,7 @@ import {
   PostsDraftsService,
   PostsService,
 } from '@/services';
-import { paginator } from '@/shared';
+import { isError, paginator } from '@/shared';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PostsDraftsDto } from './dto/posts-drafts.dto';
@@ -50,9 +52,10 @@ export class PostsDraftsController {
     ]),
   )
   async create(
-    @Param('id') postId: string,
+    @Param('id', ParseIntPipe) postId: string,
     @Body() body: PostsDraftsDto,
     @Res() res: Response,
+    @Next() next: NextFunction,
     @UploadedFiles()
     files: {
       mainImg?: Express.Multer.File[];
@@ -62,19 +65,13 @@ export class PostsDraftsController {
     const { mainImg, otherImgs } = files || {};
 
     const author = await this.authorValidate(res.locals.user.id, res);
-    if (!author) {
-      return ApiError.AuthorNotFound();
-    }
+    if (!author) return next(ApiError.AuthorNotFound());
 
     const mainNameImg = this.fileService.savePostImage(mainImg) || [];
-    if (mainNameImg instanceof ApiError) {
-      throw new HttpException(mainNameImg, HttpStatus.BAD_REQUEST);
-    }
+    if (isError(mainNameImg)) return next(mainNameImg);
 
     const otherNameImgs = this.fileService.savePostImage(otherImgs) || [];
-    if (otherNameImgs instanceof ApiError) {
-      throw new HttpException(otherNameImgs, HttpStatus.BAD_REQUEST);
-    }
+    if (isError(otherNameImgs)) return next(otherNameImgs);
 
     const draft = await this.postsDraftsService.create({
       ...body,
@@ -96,11 +93,11 @@ export class PostsDraftsController {
     ]),
   )
   async update(
-    @Param('id') postId: number,
+    @Param('id', ParseIntPipe) postId: number,
     @Param('did') draftId: number,
     @Body() body: PostsDraftsDto,
-    @Req() req: Request,
     @Res() res: Response,
+    @Next() next: NextFunction,
     @UploadedFiles()
     files: {
       mainImg?: Express.Multer.File[];
@@ -112,22 +109,16 @@ export class PostsDraftsController {
     const author = await this.authorsService.getByUserId(res.locals.user.id);
 
     const post = await this.postsService.getOne(postId);
-    if (post instanceof ApiError) {
-      return post;
-    }
-    if (!author || !post || post.author?.id !== author.id) {
-      throw new HttpException('Not found', HttpStatus.NOT_FOUND);
-    }
+    if (isError(post)) return post;
+
+    if (!author || !post || post.author?.id !== author.id)
+      return next(ApiError.NotFound());
 
     const mainNameImg = this.fileService.savePostImage(mainImg) || [];
-    if (mainNameImg instanceof ApiError) {
-      throw new HttpException(mainNameImg, HttpStatus.BAD_REQUEST);
-    }
+    if (isError(mainNameImg)) return next(mainNameImg);
 
     const otherNameImgs = this.fileService.savePostImage(otherImgs) || [];
-    if (otherNameImgs instanceof ApiError) {
-      throw new HttpException(otherNameImgs, HttpStatus.BAD_REQUEST);
-    }
+    if (isError(otherNameImgs)) return next(otherNameImgs);
 
     const result = await this.postsDraftsService.update({
       ...body,
@@ -143,15 +134,16 @@ export class PostsDraftsController {
 
   @Get(':id/drafts')
   async getAll(
-    @Param('id') postId: number,
+    @Param('id', ParseIntPipe) postId: number,
     @Res() res: Response,
     @Req() req: Request,
-    @Query('per_page') perPage = 10,
-    @Query('page') page = 0,
+    @Next() next: NextFunction,
+    @Query('per_page', ParseIntPipe) perPage = 10,
+    @Query('page', ParseIntPipe) page = 0,
   ) {
     const author = await this.authorValidate(res.locals.user.id, res);
     if (!author) {
-      throw new HttpException('Author not found', HttpStatus.NOT_FOUND);
+      return next(ApiError.AuthorNotFound());
     }
 
     const { totalCount, count, drafts } =
@@ -175,13 +167,14 @@ export class PostsDraftsController {
 
   @Get(':id/drafts/:did')
   async getOne(
-    @Param('id') postId: number,
-    @Param('did') draftId: number,
+    @Param('id', ParseIntPipe) postId: number,
+    @Param('did', ParseIntPipe) draftId: number,
     @Res() res: Response,
+    @Next() next: NextFunction,
   ) {
     const author = await this.authorValidate(res.locals.user.id, res);
     if (!author) {
-      throw new HttpException('Author not found', HttpStatus.NOT_FOUND);
+      return next(ApiError.AuthorNotFound());
     }
 
     const result = await this.postsDraftsService.getOne({
@@ -196,8 +189,8 @@ export class PostsDraftsController {
   @Delete(':id/drafts/:did')
   @UseGuards(JwtAuthGuard)
   async delete(
-    @Param('id') postId: number,
-    @Param('did') draftId: number,
+    @Param('id', ParseIntPipe) postId: number,
+    @Param('did', ParseIntPipe) draftId: number,
     @Res() res: Response,
   ) {
     await this.authorValidate(res.locals.user.id, res);
@@ -212,13 +205,14 @@ export class PostsDraftsController {
   @Post(':id/drafts/:did/publish')
   @UseGuards(JwtAuthGuard)
   async publish(
-    @Param('id') postId: number,
-    @Param('did') draftId: number,
+    @Param('id', ParseIntPipe) postId: number,
+    @Param('did', ParseIntPipe) draftId: number,
     @Res() res: Response,
+    @Next() next: NextFunction,
   ) {
     const author = await this.authorValidate(res.locals.user.id, res);
     if (!author) {
-      throw new HttpException('Author not found', HttpStatus.NOT_FOUND);
+      return next(ApiError.AuthorNotFound());
     }
 
     const result = await this.postsDraftsService.publish({

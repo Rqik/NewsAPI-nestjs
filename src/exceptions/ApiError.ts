@@ -1,8 +1,8 @@
+import { HttpException } from '@nestjs/common';
+
 import HttpStatuses from '../shared/HttpStatuses';
 
-class ApiError extends Error {
-  status;
-
+class ApiError extends HttpException {
   errors;
 
   constructor({
@@ -14,8 +14,7 @@ class ApiError extends Error {
     message: string;
     errors?: Error[];
   }) {
-    super(message);
-    this.status = status;
+    super(message, status);
     this.errors = errors;
   }
 
@@ -70,6 +69,35 @@ class ApiError extends Error {
     return new ApiError({
       status: HttpStatuses.NOT_FOUND,
       message: 'Draft not found',
+    });
+  }
+
+  static UserNotFound() {
+    return new ApiError({
+      status: HttpStatuses.NOT_FOUND,
+      message: 'User not found',
+    });
+  }
+
+  static TagNotFound() {
+    return new ApiError({
+      status: HttpStatuses.NOT_FOUND,
+      message: 'Tag not found',
+    });
+  }
+
+  static ForbiddenError({
+    message = 'User already exists',
+    errors,
+  }: {
+    message?: string;
+    detail?: string;
+    errors?: Array<Error>;
+  }) {
+    return new ApiError({
+      status: HttpStatuses.FORBIDDEN,
+      message,
+      errors,
     });
   }
 }

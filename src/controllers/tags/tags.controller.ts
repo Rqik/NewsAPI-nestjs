@@ -5,11 +5,13 @@ import {
   Get,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
@@ -17,6 +19,7 @@ import { Request, Response } from 'express';
 import { TagsService } from '@/services';
 import { paginator } from '@/shared';
 
+import { JwtAdminGuard } from '../auth/jwt-admin.guard';
 import { TagDto } from './dto/tag.dto';
 
 @Controller('tags')
@@ -27,6 +30,7 @@ export class TagsController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAdminGuard)
   async create(@Body() body: TagDto, @Res() res: Response) {
     const tag = await this.tagsService.create(body);
 
@@ -34,15 +38,13 @@ export class TagsController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: number, @Body() body: TagDto) {
-    const tag = await this.tagsService.update({ ...body, id });
-
-    return tag;
+  @UseGuards(JwtAdminGuard)
+  async update(@Param('id', ParseIntPipe) id: number, @Body() body: TagDto) {
+    return this.tagsService.update({ ...body, id });
   }
 
   @Get()
   async getAll(
-    @Res() res: Response,
     @Req() req: Request,
     @Query('per_page') perPage = 10,
     @Query('page') page = 0,
@@ -66,16 +68,13 @@ export class TagsController {
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: number) {
-    const tag = await this.tagsService.getOne(id);
-
-    return tag;
+  async getOne(@Param('id', ParseIntPipe) id: number) {
+    return this.tagsService.getOne(id);
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: number) {
-    const removedTag = await this.tagsService.delete(id);
-
-    return removedTag;
+  @UseGuards(JwtAdminGuard)
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.tagsService.delete(id);
   }
 }

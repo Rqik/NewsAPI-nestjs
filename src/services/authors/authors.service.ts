@@ -2,14 +2,19 @@ import { Injectable } from '@nestjs/common';
 
 import { AuthorDto } from '@/controllers/authors/dto/author.dto';
 import { PrismaService } from '@/database/prisma.service';
+import { ApiError } from '@/exceptions';
 
 @Injectable()
 export class AuthorsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create({ description, userId }: AuthorDto) {
-    const author = await this.prisma.author.create({
-      data: {
+  async create({ description, userId }: AuthorDto & { userId: number }) {
+    const author = await this.prisma.author.upsert({
+      where: { fk_user_id: userId },
+      update: {
+        description,
+      },
+      create: {
         description,
         fk_user_id: userId,
       },
@@ -18,12 +23,25 @@ export class AuthorsService {
     return this.convertCase(author);
   }
 
-  async update({ id, description, userId }: AuthorDto & { id: number }) {
+  async update({
+    id,
+    description,
+    userId,
+  }: AuthorDto & { id: number; userId: number }) {
+    const authorUser = await this.prisma.author.findFirst({
+      where: {
+        fk_user_id: userId,
+      },
+    });
+
+    if (authorUser.author_id !== id) {
+      return ApiError.UnauthorizeError();
+    }
+
     const author = await this.prisma.author.update({
       where: { author_id: id },
       data: {
         description,
-        fk_user_id: userId,
       },
     });
 
@@ -66,13 +84,13 @@ export class AuthorsService {
   }
 
   async deleteUserAuthors(id: number) {
-    const author = await this.prisma.author.delete({
+    const author = await this.prisma.author.deleteMany({
       where: {
         fk_user_id: Number(id),
       },
     });
 
-    return this.convertCase(author);
+    return author;
   }
 
   async delete(id: number) {

@@ -3,12 +3,23 @@ import { Injectable } from '@nestjs/common';
 import { CategoryDto } from '@/controllers/categories/dto/category.dto';
 import { PrismaService } from '@/database/prisma.service';
 import { IdDto } from '@/dtos/id.dto';
+import { ApiError } from '@/exceptions';
 
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create({ description, category }: CategoryDto) {
+    if (typeof category !== 'undefined') {
+      const parentCategory = await this.prisma.category.findFirst({
+        where: {
+          category_id: category,
+        },
+      });
+      if (!parentCategory) {
+        return ApiError.CategoryNotFound();
+      }
+    }
     const newCategory = await this.prisma.category.create({
       data: {
         description,
@@ -52,13 +63,15 @@ export class CategoriesService {
   async getOne(id: number) {
     const category = await this.prisma.category.findUnique({
       where: { category_id: id },
+      include: {
+        categories: this.recursive(10),
+      },
     });
 
-    return category ? this.convertCase(category) : category;
+    return category ? this.convertCaseRecursive(category) : category;
   }
 
   async delete(id: number) {
-    // TODO:проверить data !== null
     const data = await this.prisma.category.delete({
       where: {
         category_id: id,
@@ -73,7 +86,45 @@ export class CategoriesService {
     return {
       id: category.category_id,
       description: category.description,
-      fkCategoryId: category.fk_category_id,
+      parentCategoryId: category.fk_category_id,
+    };
+  }
+
+  private convertCaseRecursive(category: any) {
+    const parent = category.categories;
+
+    if (typeof parent === 'object' && parent !== null)
+      return [
+        {
+          id: category.category_id,
+          description: category.description,
+          parentCategoryId: category.fk_category_id,
+        },
+        ...this.convertCaseRecursive(parent),
+      ];
+
+    return [
+      {
+        id: category.category_id,
+        description: category.description,
+        parentCategoryId: category.fk_category_id,
+      },
+    ];
+  }
+
+  private recursive(level: number) {
+    if (level === 0) {
+      return {
+        include: {
+          categories: true,
+        },
+      };
+    }
+
+    return {
+      include: {
+        categories: this.recursive(level - 1),
+      },
     };
   }
 }

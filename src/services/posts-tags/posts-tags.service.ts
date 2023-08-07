@@ -63,7 +63,7 @@ export class PostsTagsService {
       return data;
     }
 
-    return ApiError.BadRequest('Tag not found');
+    return ApiError.TagNotFound();
   }
 
   private async checkPostBelongsTags({

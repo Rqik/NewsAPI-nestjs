@@ -5,6 +5,7 @@ import {
   Next,
   Param,
   Post,
+  Put,
   Req,
   Res,
 } from '@nestjs/common';
@@ -12,12 +13,13 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import ms from 'ms';
 
-import { ApiError } from '@/exceptions';
 import { UsersService } from '@/services';
+import { isError } from '@/shared';
 
 import { AuthDto } from './dto/auth.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
-@Controller('auth')
+@Controller('')
 export class AuthController {
   constructor(
     private readonly usersService: UsersService,
@@ -28,9 +30,7 @@ export class AuthController {
   async login(@Body() body: AuthDto, @Res() res: Response, @Next() next: any) {
     const userData = await this.usersService.login(body);
 
-    if (userData instanceof ApiError) {
-      return next(userData);
-    }
+    if (isError(userData)) return next(userData);
 
     res.cookie('refreshToken', userData.refreshToken, {
       maxAge: ms(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN')),
@@ -38,6 +38,24 @@ export class AuthController {
     });
 
     return res.json(userData);
+  }
+
+  @Put('password')
+  async changePassword(
+    @Body() body: ChangePasswordDto,
+    @Res() res: Response,
+    @Next() next: any,
+  ) {
+    const result = await this.usersService.changePassword({
+      ...body,
+      email: res.locals.user?.email,
+    });
+
+    if (isError(result)) {
+      return next(result);
+    }
+
+    return res.send(result);
   }
 
   @Get('logout')
@@ -50,23 +68,24 @@ export class AuthController {
   }
 
   @Get('activate/:link')
-  async activate(@Res() res: Response, @Param('link') link: string) {
-    await this.usersService.activate(link);
-    res.redirect(this.configService.get('CLIENT_URL', 'https://ya.ru/'));
+  async activate(@Param('link') link: string) {
+    const user = await this.usersService.activate(link);
+
+    return user;
   }
 
   @Get('refresh')
   async refresh(@Req() req: Request, @Res() res: Response, @Next() next: any) {
     const { refreshToken } = req.cookies;
     const userData = await this.usersService.refresh(refreshToken);
-    if (userData instanceof ApiError) {
-      next(userData);
-    } else {
-      res.cookie('refreshToken', userData.refreshToken, {
-        maxAge: ms(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN')),
-        httpOnly: true,
-      });
-      res.json(userData);
-    }
+
+    if (isError(userData)) return next(userData);
+
+    res.cookie('refreshToken', userData.refreshToken, {
+      maxAge: ms(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN')),
+      httpOnly: true,
+    });
+
+    return res.json(userData);
   }
 }

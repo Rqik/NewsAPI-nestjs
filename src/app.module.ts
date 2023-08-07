@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { resolve } from 'path';
 
 import { AppConfigModule } from './config/config.module';
 import { AuthController } from './controllers/auth/auth.controller';
@@ -9,6 +11,7 @@ import { PostsController } from './controllers/posts/posts.controller';
 import { PostsCommentsController } from './controllers/posts-comments/posts-comments.controller';
 import { PostsDraftsController } from './controllers/posts-drafts/posts-drafts.controller';
 import { TagsController } from './controllers/tags/tags.controller';
+import { UserController } from './controllers/user/user.controller';
 import { UsersController } from './controllers/users/users.controller';
 import { DatabaseModule } from './database/database.module';
 import { AuthorsService } from './services/authors/authors.service';
@@ -25,8 +28,20 @@ import { TagsService } from './services/tags/tags.service';
 import { TokensService } from './services/tokens/tokens.service';
 import { UsersService } from './services/users/users.service';
 
+console.log(resolve(__dirname, '..', 'static'));
+
 @Module({
-  imports: [AppConfigModule, DatabaseModule, JwtModule],
+  imports: [
+    ServeStaticModule.forRoot({
+      rootPath: resolve(__dirname, '..', 'static'),
+    }),
+    AppConfigModule,
+    DatabaseModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '60s' },
+    }),
+  ],
   controllers: [
     AuthController,
     AuthorsController,
@@ -36,6 +51,7 @@ import { UsersService } from './services/users/users.service';
     PostsDraftsController,
     TagsController,
     UsersController,
+    UserController,
   ],
   providers: [
     AuthorsService,

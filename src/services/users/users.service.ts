@@ -8,8 +8,9 @@ import { UpdateUserDto } from '@/controllers/users/dto/updateUser.dto';
 import { UserDto as CreateUserDto } from '@/controllers/users/dto/user.dto';
 import { PrismaService } from '@/database/prisma.service';
 import { IdDto } from '@/dtos/id.dto';
-import { UserDto } from '@/dtos/user.dto';
+import { UserLocalDto } from '@/dtos/user.dto';
 import { ApiError } from '@/exceptions';
+import { isError } from '@/shared';
 
 import { AuthorsService } from '../authors/authors.service';
 import { MailService } from '../mail/mail.service';
@@ -51,12 +52,15 @@ export class UsersService {
 
     const candidate = await this.getOne({ login });
 
-    if (candidate !== null) {
+    if (!isError(candidate)) {
       return ApiError.BadRequest(`User with this login ${login} exists`);
     }
 
     const hashPassword = await bcrypt.hash(password, 7);
+
     const activateLink = uuid();
+    console.log(activateLink);
+
     try {
       await this.mailService.sendActivationMail({
         to: email,
@@ -75,9 +79,10 @@ export class UsersService {
           password: hashPassword,
         },
       });
-      // this.convertCase(user)
-      const userDto = new UserDto();
+
+      const userDto = new UserLocalDto(this.convertCase(user));
       const tokens = this.tokensService.generateTokens({ ...userDto });
+
       await this.tokensService.create({
         userId: userDto.id,
         refreshToken: tokens.refreshToken,
@@ -94,13 +99,15 @@ export class UsersService {
   async activate(activateLink: string) {
     const user = await this.prismaService.user.findFirst({
       where: {
-        activate_link: { equals: activateLink },
+        activate_link: activateLink,
         is_activated: false,
       },
     });
+
     if (!user) {
-      return user;
+      return ApiError.BadRequest('User is activated');
     }
+
     const userUpdated = await this.prismaService.user.update({
       where: {
         user_id: user.user_id,
@@ -116,16 +123,14 @@ export class UsersService {
   async login({ login, password }: { login: string; password: string }) {
     const user = await this.getOne({ login });
 
-    if (user === null) {
-      return ApiError.BadRequest(`User ${login} not found`);
-    }
+    if (isError(user)) return user;
 
     const isPassEquals = await bcrypt.compare(password, user.password);
     if (!isPassEquals) {
       return ApiError.BadRequest('Wrong password');
     }
     // user
-    const userDto = new UserDto();
+    const userDto = new UserLocalDto(user);
     const tokens = this.tokensService.generateTokens({ ...userDto });
     await this.tokensService.create({
       userId: userDto.id,
@@ -159,11 +164,11 @@ export class UsersService {
 
     const user = await this.getById({ id: userData.id });
 
-    if (!user) {
+    if (isError(user)) {
       return ApiError.UnauthorizeError();
     }
     // user
-    const userDto = new UserDto();
+    const userDto = new UserLocalDto(user);
     const tokens = this.tokensService.generateTokens({ ...userDto });
 
     await this.tokensService.create({
@@ -180,18 +185,13 @@ export class UsersService {
     lastName,
     avatar,
     login,
-    password,
   }: IdDto & UpdateUserDto) {
     const user = await this.getOne({ login });
 
-    if (user === null) {
-      return ApiError.BadRequest(`User ${login} not found`);
-    }
-
-    const isPassEquals = await bcrypt.compare(password, user.password);
-
-    if (!isPassEquals) {
-      return ApiError.BadRequest('Wrong password');
+    if (!isError(user) && Number(user.id) !== Number(id)) {
+      return ApiError.ForbiddenError({
+        message: 'User already exists',
+      });
     }
 
     const userUpdated = await this.prismaService.user.update({
@@ -204,6 +204,39 @@ export class UsersService {
         avatar,
         login,
       },
+    });
+
+    return this.convertCase(userUpdated);
+  }
+
+  async changePassword({
+    password,
+    newPassword,
+    email,
+  }: {
+    password: string;
+    newPassword: string;
+    email: string;
+  }) {
+    const user = await this.prismaService.user.findFirst({
+      where: { email },
+    });
+
+    if (!user) {
+      return ApiError.UserNotFound();
+    }
+
+    const isPassEquals = await bcrypt.compare(password, user.password);
+
+    if (!isPassEquals) {
+      return ApiError.ValidationFailed();
+    }
+
+    const hashPassword = bcrypt.hashSync(newPassword, 7);
+
+    const userUpdated = await this.prismaService.user.update({
+      where: { user_id: user.user_id },
+      data: { password: hashPassword },
     });
 
     return this.convertCase(userUpdated);
@@ -229,7 +262,6 @@ export class UsersService {
   }
 
   async getAll({ page, perPage }: { page: number; perPage: number }) {
-    console.log('totalCount');
     const [totalCount, data] = await this.prismaService.$transaction([
       this.prismaService.user.count(),
       this.prismaService.user.findMany({ skip: page * perPage, take: perPage }),
@@ -249,7 +281,11 @@ export class UsersService {
       where: { login },
     });
 
-    return user ? this.convertCase(user) : user;
+    if (user === null) {
+      return ApiError.UserNotFound();
+    }
+
+    return this.convertCase(user);
   }
 
   async getById({ id }: IdDto) {
@@ -257,11 +293,16 @@ export class UsersService {
       where: { user_id: Number(id) },
     });
 
-    return user ? this.convertCase(user) : user;
+    if (user === null) {
+      return ApiError.UserNotFound();
+    }
+
+    return this.convertCase(user);
   }
 
   async delete({ id }: IdDto) {
     await this.authorsService.deleteUserAuthors(id);
+
     const user = await this.prismaService.user.delete({
       where: { user_id: Number(id) },
     });

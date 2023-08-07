@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import nodemailer from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 @Injectable()
@@ -20,6 +20,16 @@ export class MailService {
   }
 
   async sendActivationMail({ to, link }: { to: string; link: string }) {
+    console.log([
+      {
+        key: 'email',
+        value: 'tabasaranec96@mail.ru',
+        description: '',
+        type: 'text',
+        enabled: true,
+      },
+    ]);
+
     await this.transporter.sendMail({
       from: this.configService.get<string>('SMTP_USER'),
       to,

@@ -4,18 +4,23 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
+  Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 import { ApiError } from '@/exceptions';
+import { TokensService } from '@/services';
 import { AuthorsService } from '@/services/authors/authors.service';
-import { paginator } from '@/shared';
+import { getAuthorizationToken, paginator } from '@/shared';
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthorDto } from './dto/author.dto';
 
 @Controller('authors')
@@ -23,31 +28,43 @@ export class AuthorsController {
   constructor(
     private readonly authorsService: AuthorsService,
     private readonly configService: ConfigService,
+    private readonly tokensService: TokensService,
   ) {}
 
   @Post()
-  async create(@Body() body: AuthorDto) {
-    const result = await this.authorsService.create(body);
+  @UseGuards(JwtAuthGuard)
+  async create(@Body() body: AuthorDto, @Res() res: Response) {
+    const result = await this.authorsService.create({
+      ...body,
+      userId: res.locals.user.id,
+    });
 
     return result;
   }
 
   @Put(':id')
-  async update(@Param('id') id: number, @Body() body: AuthorDto) {
-    const result = await this.authorsService.update({ ...body, id });
-
-    return result;
+  @UseGuards(JwtAuthGuard)
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: AuthorDto,
+    @Res() res: Response,
+  ) {
+    return this.authorsService.update({
+      ...body,
+      id,
+      userId: res.locals.user.id,
+    });
   }
 
   @Get()
   async getAll(
-    @Res() req: Request,
-    @Query('per_page') perPage = '10',
-    @Query('page') page = '0',
+    @Req() req: Request,
+    @Query('per_page') perPage = 10,
+    @Query('page') page = 0,
   ) {
     const { totalCount, count, authors } = await this.authorsService.getAll({
-      page: Number(page),
-      perPage: Number(perPage),
+      page,
+      perPage,
     });
 
     const pagination = paginator({
@@ -64,7 +81,7 @@ export class AuthorsController {
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: number) {
+  async getOne(@Param('id', ParseIntPipe) id: number) {
     const result = await this.authorsService.getOne(id);
 
     if (!result) {
@@ -75,7 +92,7 @@ export class AuthorsController {
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: number) {
+  async delete(@Param('id', ParseIntPipe) id: number) {
     const result = await this.authorsService.delete(id);
 
     if (!result) {

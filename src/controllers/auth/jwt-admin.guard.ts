@@ -6,7 +6,7 @@ import { TokensService } from '@/services';
 import { getAuthorizationToken } from '@/shared';
 
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
+export class JwtAdminGuard implements CanActivate {
   constructor(private tokensService: TokensService) {}
 
   canActivate(
@@ -18,7 +18,17 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const token = getAuthorizationToken(req);
 
+      if (!token) throw ApiError.NotFound();
+
       const userDto = this.tokensService.validateAccess(token);
+
+      if (!userDto || typeof userDto !== 'object') {
+        throw ApiError.NotFound();
+      }
+
+      if (!userDto?.isAdmin || !userDto.isActivated) {
+        throw ApiError.NotFound();
+      }
 
       res.locals.user = userDto;
 

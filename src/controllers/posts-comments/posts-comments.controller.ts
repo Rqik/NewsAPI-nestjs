@@ -5,6 +5,7 @@ import {
   Get,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Req,
@@ -37,10 +38,10 @@ export class PostsCommentsController {
   @Post(':id/comments')
   @UseGuards(JwtAuthGuard)
   async create(
-    @Param('id') postId: number,
+    @Param('id', ParseIntPipe) postId: number,
     @Body() body: PostsCommentsDto,
     @Res() res: Response,
-    @Res() req: Request,
+    @Req() req: Request,
   ) {
     const accessToken = getAuthorizationToken(req);
 
@@ -64,7 +65,7 @@ export class PostsCommentsController {
 
   @Get(':id/comments')
   async getCommentsPost(
-    @Param('id') postId: number,
+    @Param('id', ParseIntPipe) postId: number,
     @Req() req: Request,
     @Query('per_page') perPage = 10,
     @Query('page') page = 0,
@@ -91,7 +92,10 @@ export class PostsCommentsController {
 
   @Delete(':id/comments/:cid')
   @UseGuards(JwtAuthGuard)
-  async delete(@Param('id') postId: string, @Param('cid') commentId: string) {
+  async delete(
+    @Param('id', ParseIntPipe) postId: string,
+    @Param('cid', ParseIntPipe) commentId: number,
+  ) {
     const comment = await this.postsCommentsService.delete({
       postId: Number(postId),
       commentId: Number(commentId),

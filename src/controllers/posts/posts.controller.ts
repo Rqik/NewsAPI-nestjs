@@ -3,8 +3,9 @@ import {
   Controller,
   Delete,
   Get,
+  Next,
   Param,
-  Patch,
+  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -16,15 +17,15 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 import { ApiError } from '@/exceptions';
 import { AuthorsService, FileService, PostsService } from '@/services';
-import { paginator } from '@/shared';
+import { HttpStatuses, isError, paginator } from '@/shared';
 
+import { JwtAdminGuard } from '../auth/jwt-admin.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PostDto } from './dto/post.dto';
-import { UpdatePostDto } from './dto/updatePost.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -46,6 +47,7 @@ export class PostsController {
   async create(
     @Body() body: PostDto,
     @Res() res: Response,
+    @Next() next: NextFunction,
     @UploadedFiles()
     files: {
       mainImg?: Express.Multer.File[];
@@ -55,21 +57,16 @@ export class PostsController {
     const { mainImg, otherImgs } = files || {};
 
     const mainNameImg = this.fileService.savePostImage(mainImg) || [];
-    if (mainNameImg instanceof ApiError) {
-      return mainNameImg;
-    }
+    if (isError(mainNameImg)) return next(mainNameImg);
+
     const otherNameImgs = this.fileService.savePostImage(otherImgs) || [];
-    if (otherNameImgs instanceof ApiError) {
-      return mainNameImg;
-    }
+    if (isError(otherNameImgs)) return next(otherNameImgs);
 
     const author = await this.authorsService.getByUserId(res.locals.user.id);
-    if (author instanceof ApiError) {
-      return author;
-    }
-    if (author === null || Number(body.authorId) !== author.id) {
-      return ApiError.BadRequest('Not valid author id');
-    }
+    if (isError(author)) return next(author);
+
+    if (author === null || Number(body.authorId) !== author.id)
+      return next(ApiError.UnauthorizeError());
 
     const post = await this.postsService.create({
       ...body,
@@ -77,10 +74,11 @@ export class PostsController {
       otherImgs: otherNameImgs,
     });
 
-    return post;
+    return res.status(HttpStatuses.CREATED_201).send(post);
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'mainImg', maxCount: 1 },
@@ -88,8 +86,10 @@ export class PostsController {
     ]),
   )
   async update(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() body: PostDto,
+    @Next() next: NextFunction,
+    @Res() res: Response,
     @UploadedFiles()
     files: {
       mainImg?: Express.Multer.File[];
@@ -98,13 +98,16 @@ export class PostsController {
   ) {
     const { mainImg, otherImgs } = files;
     const mainNameImg = this.fileService.savePostImage(mainImg) || [];
-    if (mainNameImg instanceof ApiError) {
-      throw mainNameImg;
-    }
+    if (isError(mainNameImg)) return next(mainNameImg);
+
     const otherNameImgs = this.fileService.savePostImage(otherImgs) || [];
-    if (otherNameImgs instanceof ApiError) {
-      throw otherNameImgs;
-    }
+    if (isError(otherNameImgs)) return next(otherNameImgs);
+
+    const author = await this.authorsService.getByUserId(res.locals.user.id);
+    if (isError(author)) return next(author);
+
+    if (author === null || Number(body.authorId) !== author.id)
+      return next(ApiError.UnauthorizeError());
 
     const post = await this.postsService.update({
       ...body,
@@ -113,14 +116,7 @@ export class PostsController {
       otherImgs: otherNameImgs,
     });
 
-    return post;
-  }
-
-  @Patch(':id')
-  async partialUpdate(@Param('id') id: number, @Body() body: UpdatePostDto) {
-    const post = await this.postsService.partialUpdate({ ...body, id });
-
-    return post;
+    return res.status(HttpStatuses.OK_200).send(post);
   }
 
   @Get()
@@ -153,7 +149,7 @@ export class PostsController {
     const pagination = paginator({
       totalCount,
       count,
-      req, // Необходимо передать объект запроса для пагинации
+      req,
       route: '/posts',
       page: Number(page),
       perPage: Number(perPage),
@@ -164,14 +160,15 @@ export class PostsController {
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: number) {
+  async getOne(@Param('id', ParseIntPipe) id: number) {
     const post = await this.postsService.getOne(id);
 
     return post;
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: number) {
+  @UseGuards(JwtAdminGuard)
+  async delete(@Param('id', ParseIntPipe) id: number) {
     const post = await this.postsService.delete(id);
 
     return post;

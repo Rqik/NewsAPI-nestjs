@@ -3,27 +3,30 @@ import {
   Controller,
   Delete,
   Get,
-  HttpException,
   HttpStatus,
+  Next,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
   Req,
   Res,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
 import ms from 'ms';
 
 import { ApiError } from '@/exceptions';
 import { FileService, TokensService, UsersService } from '@/services';
-import { getAuthorizationToken, paginator } from '@/shared';
+import { getAuthorizationToken, isError, paginator } from '@/shared';
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { UserDto } from './dto/user.dto';
 
@@ -42,29 +45,27 @@ export class UsersController {
     @Body() body: UserDto,
     @Res() res: Response,
     @UploadedFile() avatar,
+    @Next() next: NextFunction,
   ) {
     const { firstName, lastName, login, password, email } = body;
 
     const avatarName = this.fileService.saveAvatar(avatar);
 
-    if (avatarName instanceof ApiError) {
-      throw new HttpException(avatar, HttpStatus.BAD_REQUEST);
-    }
+    if (isError(avatarName)) return next(avatarName);
 
     const userData = await this.usersService.registration({
       password,
       login,
-      avatar: avatarName,
+      avatar: 'avatarName',
       lastName,
       firstName,
       email,
     });
 
-    if (userData instanceof ApiError) {
-      return userData;
-    }
+    if (isError(userData)) return next(userData);
+
     res.cookie('refreshToken', userData.refreshToken, {
-      maxAge: ms(this.configService.get('jwtRefreshExpireIn') as string),
+      maxAge: ms(this.configService.get('JWT_REFRESH_EXPIRES_IN') as string),
       httpOnly: true,
     });
 
@@ -72,7 +73,10 @@ export class UsersController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: number, @Body() body: UserDto) {
+  async update(
+    @Body() body: UpdateUserDto,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     const result = await this.usersService.update({ ...body, id });
 
     return result;
@@ -118,41 +122,24 @@ export class UsersController {
   @Get(':login')
   async getOne(@Param('login') login: string) {
     const result = await this.usersService.getOne({ login });
-    if (result === null) {
-      throw new HttpException(
-        `User ${login} not found`,
-        HttpStatus.BAD_REQUEST,
-      );
-    } else {
-      return result;
-    }
+
+    return result;
   }
 
   @Get('current')
-  async getCurrentAuth(@Req() req: Request) {
-    const accessToken = getAuthorizationToken(req);
-    const tokenData = this.tokensService.validateAccess(accessToken);
+  @UseGuards(JwtAuthGuard)
+  async getCurrentAuth(@Res() res: Response) {
+    const result = await this.usersService.getById({ id: res.locals.user.id });
 
-    if (tokenData === null || typeof tokenData === 'string') {
-      throw new HttpException(
-        'Invalid Authorization token',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const { id } = tokenData as JwtPayload;
-    const result = await this.usersService.getById({ id });
-
-    if (result === null) {
-      throw new HttpException(`User ${id} not found`, HttpStatus.BAD_REQUEST);
-    } else {
-      return result;
-    }
+    return res.send(result);
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: number) {
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    console.log(id);
+
     const result = await this.usersService.delete({ id });
+    console.log(result);
 
     return result;
   }

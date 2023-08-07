@@ -82,7 +82,7 @@ export class PostsDraftsService {
       // return removedDraft;
     }
 
-    return ApiError.BadRequest('Tag not found');
+    return ApiError.TagNotFound();
   }
 
   async update({
@@ -120,7 +120,7 @@ export class PostsDraftsService {
       return draft;
     }
 
-    return ApiError.BadRequest('Not found drafts');
+    return ApiError.DraftNotFound();
   }
 
   async getOne({ postId, draftId }: { postId: number; draftId: number }) {
@@ -132,19 +132,19 @@ export class PostsDraftsService {
       return draft;
     }
 
-    return ApiError.BadRequest('Not found drafts');
+    return ApiError.DraftNotFound();
   }
 
   async publish({ postId, draftId }: { postId: number; draftId: number }) {
     const isBelongs = await this.checkPostBelongsDraft({ postId, draftId });
 
     if (!isBelongs) {
-      return ApiError.BadRequest('Not found drafts');
+      return ApiError.DraftNotFound();
     }
     const draft = await this.draftsService.getOne(draftId);
 
     if (draft === null) {
-      return ApiError.BadRequest('Not found drafts');
+      return ApiError.DraftNotFound();
     }
 
     await this.postsService.update({ ...draft, id: postId });
